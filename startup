@@ -1,0 +1,29 @@
+#!/usr/bin/env perl
+# martin, 2018-09-05
+# ... generates the perfect startup name
+
+use strict;
+use warnings;
+use utf8;
+use v5.16.0;
+
+my @letters = ('a'..'z');
+my @vocals  = qw/a e i o u/;
+
+my %count;
+$count{$_}++ for (@letters, @vocals);
+my @consonants = grep {
+  push(@letters, $_) if $count{$_} <= 1;
+} @letters;
+
+my $word;
+for (1..5) {
+  if ($_ % 2 == 0) {
+    $word .= $consonants[rand @consonants];
+  } else {
+    $word .= $vocals[rand @vocals];
+  }
+}
+
+print $word, "\n";
+
