@@ -64,9 +64,10 @@ sub setup {
   $ENV{TZ} = 'Europe/Berlin';
 
   if ($^O =~ /MSWin32/) {
+    print STDERR "Warning: This script might not work on MS-Windows.\n";
+
     # Get Unicode working in cmd.exe / PowerShell
     # (What the fucking fuck?)
-
     Module::Load::load(Win32::API);
     my $handler = Win32::API::More->new(
       qw[kernel32.dll SetConsoleOutputCP N N]
