@@ -198,11 +198,14 @@ sub get_places {
 }
 
 sub get_routes {
-  my ($ua, $auth, $from, $to) = @_;
+  my ($ua, $auth, %opts) = @_;
+
+  $opts{from} // die "can't get route without 'from'\n";
+  $opts{to}   // die "can't get route without 'to'\n";
 
   my %payload = (
-    start => $from,
-    dest => $to,
+    start => $opts{from},
+    dest => $opts{to},
     intermediateStops => Mojo::JSON::false,
     language => 'en',
     penalties => [
@@ -213,8 +216,8 @@ sub get_routes {
     ],
     realtime => 'REALTIME',
     returnContSearchData => Mojo::JSON::true,
-    schedulesAfter => 4,
-    schedulesBefore => 0,
+    schedulesAfter  => ($opts{schedules_after}  // 4), # hvv.de defaults
+    schedulesBefore => ($opts{schedules_before} // 0), # hvv.de defaults
     tariffInfoSelector => [
       {
         kinds => [1],
@@ -396,7 +399,11 @@ sub main {
 
   printf("Here are the routes from %s to %s:\n\n",
          $from->{name}, $to->{name});
-  my @routes = get_routes($ua, $auth, $from, $to);
+  my %route_opts = (
+    from => $from,
+    to => $to
+  );
+  my @routes = get_routes($ua, $auth, %route_opts);
   display(RouteList => \@routes);
 }
 
