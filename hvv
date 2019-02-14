@@ -1,0 +1,403 @@
+#!/usr/bin/env perl
+
+# martin, 2019-01-22, 2019-02-14
+# TODO:
+# - coloured output
+# - getting rid of Text::Table (maybe)
+# - non-interactive behaviour
+# - ask for time
+# - favourite places (maybe)
+# - display results in $PAGER
+
+use strict;
+use warnings;
+use utf8;
+
+no warnings qw[qw]; # Heh.
+
+use Data::Dumper;
+use Digest::SHA qw//;
+use Encode qw//;
+use Getopt::Std qw//;
+use MIME::Base64 qw//;
+use Module::Load qw//;
+
+use Mojo::JSON;
+use Mojo::UserAgent;
+use Text::Table;
+
+my %urls = (
+  base    => 'https://www.hvv.de',
+  geofox  => 'https://geofox.hvv.de'
+);
+
+%urls = (
+  %urls,
+  home       => $urls{base}.'/en',
+  check_name => $urls{base}.'/geofox/checkName',
+  gf_base    => $urls{geofox}.'/jsf/home.seam',
+  get_route  => $urls{geofox}.'/gti/restapp/getRoute',
+
+  # extended by get_auth_credentials
+  script     => $urls{geofox}.'/jsf/'
+);
+
+sub print_logo {
+  print <<'EOF';
+              ________________________
+             /  _  __ _    __ _    __
+            / / / / /| |  / /| |  / /
+           / / /_/ / | | / / | | / /
+          / / __  /  | |/ /  | |/ /
+_________/ /_/ /_/   |___/   |___/
+
+EOF
+}
+
+sub setup {
+  binmode(STDIN,  'encoding(UTF-8)');
+  binmode(STDOUT, 'encoding(UTF-8)');
+  binmode(STDERR, 'encoding(UTF-8)');
+
+  # Required for `date` (used in get_routes)
+  # to emit HVV-compliant dates
+  $ENV{TZ} = 'Europe/Berlin';
+
+  if ($^O =~ /MSWin32/) {
+    # Get Unicode working in cmd.exe / PowerShell
+    # (What the fucking fuck?)
+
+    Module::Load::load(Win32::API);
+    my $handler = Win32::API::More->new(
+      qw[kernel32.dll SetConsoleOutputCP N N]
+    );
+    $handler->Call(65001);
+  }
+
+  $SIG{INT} = \&quit;
+}
+
+sub quit {
+  my ($sig) = @_;
+
+  print "\n";
+  if ($^O =~ /MSWin32/) {
+    print "See you, and don't forget to delete Windows!\n";
+  } else {
+    print "See you! 🙃\n";
+  }
+  exit(0);
+}
+
+sub prompt_user {
+  no warnings qw[uninitialized];
+  my ($label, $fail_msg) = @_;
+
+  $fail_msg //= "Your input does not look valid\n";
+
+  my $answer;
+  while (1) {
+    print "$label ";
+    $answer = <STDIN>;
+    chomp($answer);
+
+    last if $answer ne '';
+    print $fail_msg;
+  }
+
+  return $answer;
+}
+
+sub get_auth_credentials {
+  # This method extracts the login details
+  # from publicly accessible JavaScript --
+  # Very legal & very cool!
+
+  my ($ua) = @_;
+
+  my ($res);
+
+  # Extract main.js path
+  $res = $ua->get($urls{gf_base})->result;
+  unless ($res->is_success) {
+    print "could not fetch geofox homepage\n";
+    debug_response($res);
+    die "^\n";
+  }
+
+  if ($res->body =~ m[(de/main.*?\.js)]) {
+    $urls{script} .= $1;
+  } else {
+    die "could not extract main.js uri from geofox\n";
+  }
+
+  # Fetch main.js (contains credentials)
+  $res = $ua->get($urls{script})->result;
+  unless ($res->is_success) {
+    print "could not fetch JavaScript\n";
+    debug_response($res);
+    die "^\n";
+  }
+
+  my $js = $res->body;
+  my %auth;
+
+  ($auth{username}) = $js =~ /gtiUser="(.*?)"/;
+  ($auth{password}) = $js =~ /gtiPassword="(.*?)"/;
+
+  unless ($auth{username} && $auth{password}) {
+    die "could not extract login details\n";
+  }
+
+  return \%auth;
+}
+
+sub make_auth_headers {
+  my ($auth, $req_body) = @_;
+
+  # Reference, chapter 3.3.1:
+  # https://geofox.hvv.de/gti/doc/pdf/GEOFOX_GTI_Anwenderhandbuch_p.pdf
+  my $signature = MIME::Base64::encode_base64(
+    Digest::SHA::hmac_sha1($req_body, $auth->{password}));
+
+  # $signature has an \n at the end and
+  # I have absolutely no idea why
+  chomp($signature);
+
+  return (
+    'geofox-auth-user' => $auth->{username},
+    'geofox-auth-signature' => $signature
+  );
+}
+
+sub get_places {
+  my ($ua, $query) = @_;
+
+  my %payload = (
+    maxList => 20,
+    theName => {
+      name => $query,
+    }
+  );
+  my $res = $ua->post($urls{check_name}, json => \%payload)->result;
+  unless ($res->is_success) {
+    p $res;
+    exit(0);
+  }
+
+  my $structure = Mojo::JSON::decode_json($res->body);
+  unless ($structure->{returnCode} eq 'OK') {
+    die "API did not return OK: ".Dumper($structure)."\n";
+  }
+
+  if (wantarray) {
+    return $structure->{results}->@*;
+  } else {
+    return $structure->{results}[0];
+  }
+}
+
+sub get_routes {
+  my ($ua, $auth, $from, $to) = @_;
+
+  my %payload = (
+    start => $from,
+    dest => $to,
+    intermediateStops => Mojo::JSON::false,
+    language => 'en',
+    penalties => [
+      {
+        name => 'desiredType',
+        value => 'longdistancebus,fasttrain&extrafasttrain:10000'
+      }
+    ],
+    realtime => 'REALTIME',
+    returnContSearchData => Mojo::JSON::true,
+    schedulesAfter => 4,
+    schedulesBefore => 0,
+    tariffInfoSelector => [
+      {
+        kinds => [1],
+        tariff => 'HVV',
+        tariffRegions => Mojo::JSON::false
+      },
+      {
+        kinds => [1],
+        tariff => 'SH',
+        tariffRegions => Mojo::JSON::false
+      }
+    ],
+    time => {
+      # Yes, this is shit, but loading a
+      # heavyweight module is even shittier
+      date => `date +%d.%m.%Y`,
+      time => `date +%H:%M`
+    },
+    timeIsDeparture => Mojo::JSON::true,
+    toDestBy => 'FOOTPATH',
+    toStartBy => 'FOOTPATH',
+    version => 34
+  );
+
+  # Remove newlines emitted by `date`
+  chomp($payload{time}->{date});
+  chomp($payload{time}->{time});
+
+  # Create a dummy request body which will
+  # be signed
+  my $req_body = $ua->build_tx(
+    POST => $urls{get_route},
+    json => \%payload
+  )->req->body;
+
+  # make_auth_headers expects UTF-8
+  $req_body = Encode::encode('UTF-8', $req_body);
+
+  my %headers = (
+    'Accept'       => 'application/json',
+    'Content-Type' => 'application/json',
+
+    # geofox-auth-user, geofox-auth-signature
+    make_auth_headers($auth, $req_body)
+  );
+
+  my $res = $ua->post(
+    $urls{get_route},
+    \%headers,
+    $req_body
+  )->result;
+  unless ($res->is_success) {
+    debug_response($res);
+    die "^\n";
+  }
+
+  my $structure = $res->json;
+  unless ($structure->{returnCode} eq 'OK') {
+    die "Not OK: "
+        .sprintf("(HTTP %d) ", $res->code)
+        .Dumper($structure)."\n";
+  }
+
+  if (wantarray) {
+    return $structure->{realtimeSchedules}->@*;
+  } else {
+    return $structure->{realtimeSchedules}[0];
+  }
+}
+
+sub get_response {
+  my ($ua, $url) = @_;
+
+  my $res = $ua->get($url)->result;
+  unless ($res->is_success) {
+    p $res;
+    exit(0);
+  }
+}
+
+sub debug_cookies {
+  my ($ua) = @_;
+
+  unless ($ua->isa('Mojo::UserAgent')) {
+    die 'debug_cookies expects Mojo::UserAgent';
+  }
+
+  my $cookies = $ua->cookie_jar->all;
+  print Dumper($cookies);
+}
+
+sub debug_response {
+  my ($res) = @_;
+
+  unless ($res->isa('Mojo::Message::Response')) {
+    die 'debug_response expects Mojo::Message::Response';
+  }
+
+  printf "Response: %d: %s\n", $res->code, $res->message;
+  print $res->body, "\n";
+}
+
+sub display {
+  my ($type, $ref) = @_;
+
+  if ($type eq 'PlaceList') {
+    my @places = $ref->@*;
+
+    my $tb = Text::Table->new(qw/# Name City Type/);
+    while (my ($index, $place) = each(@places)) {
+      $tb->add($index, $place->{name},
+               $place->{city}, $place->{type});
+    }
+
+    print "Found multiple places:\n\n";
+    print $tb;
+
+    printf "Please select a station [0-%d]: ", $#places;
+    my $index = <STDIN>;
+    chomp($index);
+
+    return $places[$index];
+  } elsif ($type eq 'RouteList') {
+    my @routes = $ref->@*;
+
+    for my $schedule (@routes) {
+      my $tb = Text::Table->new(qw/Time Label/);
+      my @connections = $schedule->{scheduleElements}->@*;
+      while (my ($index, $connection) = each(@connections)) {
+        $tb->add(
+          $connection->{from}{depTime}{time},
+          $connection->{from}{name}
+        );
+        $tb->add(
+          undef,
+          ($connection->{line}{direction} ?
+           (sprintf "%s => %s",
+            $connection->{line}{name},
+            $connection->{line}{direction}) :
+           "(@{[$connection->{line}{name}]})"
+          )
+        );
+
+        if ($index == $#connections) {
+          $tb->add(
+            $connection->{to}{depTime}{time},
+            $connection->{to}{name}
+          );
+        }
+      }
+      print $tb, "\n";
+    }
+  }
+}
+
+sub main {
+  setup;
+  print_logo;
+
+  my $ua = Mojo::UserAgent->new;
+
+  my (@places, $auth);
+
+  {
+    local $| = 1;
+    my $connect_msg = 'Establishing connection to HVV ...';
+    print $connect_msg;
+    $auth = get_auth_credentials($ua);
+    print "\r", ' ' x length($connect_msg), "\r";
+  }
+
+  @places = get_places($ua, prompt_user('From?'));
+  my $from = display(PlaceList => \@places);
+  print "\n";
+
+  @places = get_places($ua, prompt_user('To?'));
+  my $to = display(PlaceList => \@places);
+  print "\n";
+
+  printf("Here are the routes from %s to %s:\n\n",
+         $from->{name}, $to->{name});
+  my @routes = get_routes($ua, $auth, $from, $to);
+  display(RouteList => \@routes);
+}
+
+main;
