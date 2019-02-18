@@ -73,6 +73,10 @@ Options:
   -h, --help,
   -u, --usage   print help/usage information
 
+Example:
+  # prints 3 routes from Hamburg Airport to Elbphilharmonie
+  ./$basename  -a "airport" -b "elphi" -n 1 -p 1
+
 ./$basename is (C) 2019 Martin Frederic 
 EOF
 }
