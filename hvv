@@ -4,7 +4,6 @@
 # TODO:
 # - coloured output
 # - getting rid of Text::Table (maybe)
-# - non-interactive behaviour
 # - ask for time
 # - favourite places (maybe)
 # - display results in $PAGER
@@ -378,9 +377,17 @@ sub main {
   setup;
   print_logo;
 
-  my $ua = Mojo::UserAgent->new;
+  my (@places, $auth, %cmd_opts, %route_opts);
 
-  my (@places, $auth, %route_opts);
+  if (@ARGV) {
+    Module::Load::load(Getopt::Std);
+
+    # Switches:
+    # a / b -- from A to B
+    Getopt::Std::getopt('a:b:', \%cmd_opts);
+  }
+
+  my $ua = Mojo::UserAgent->new;
 
   {
     local $| = 1;
@@ -390,13 +397,25 @@ sub main {
     print "\r", ' ' x length($connect_msg), "\r";
   }
 
-  @places = get_places($ua, prompt_user('From?'));
-  $route_opts{from} = display(PlaceList => \@places);
-  print "\n";
+  if ($cmd_opts{a}) {
+    # non-interactive
+    $route_opts{from} = get_places($ua, $cmd_opts{a});
+  } else {
+    # interactive
+    @places = get_places($ua, prompt_user('From?'));
+    $route_opts{from} = display(PlaceList => \@places);
+    print "\n";
+  }
 
-  @places = get_places($ua, prompt_user('To?'));
-  $route_opts{to} = display(PlaceList => \@places);
-  print "\n";
+  if ($cmd_opts{b}) {
+    # non-interactive
+    $route_opts{to} = get_places($ua, $cmd_opts{b});
+  } else {
+    # interactive
+    @places = get_places($ua, prompt_user('To?'));
+    $route_opts{to} = display(PlaceList => \@places);
+    print "\n";
+  }
 
   printf("Here are the routes from %s to %s:\n\n",
          $route_opts{from}->{name},
