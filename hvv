@@ -62,6 +62,9 @@ sub print_help {
 Usage: ./$basename [OPTION]...
 
 Run without any option for interactive use.
+Alternatively, run with some options for limited interactive use. :)
+
+Run with at least -a and -b for non-interactive use.
 
 Options:
   -a PLACE      use PLACE as start (from where?)
