@@ -1,6 +1,8 @@
 #!/usr/bin/env perl
 
 # martin, 2019-01-22, 2019-02-14
+# call with --help for help/usage
+
 # TODO:
 # - coloured output
 # - getting rid of Text::Table (maybe)
@@ -50,6 +52,24 @@ sub print_logo {
           / / __  /  | |/ /  | |/ /
 _________/ /_/ /_/   |___/   |___/
 
+EOF
+}
+
+sub print_help {
+  Module::Load::load(File::Basename);
+  my $basename = File::Basename::basename($0);
+  print <<"EOF";
+Usage: ./$basename [OPTION]...
+
+Run without any option for interactive use.
+
+Options:
+  -a PLACE      use PLACE as start (from where?)
+  -b PLACE      use PLACE as destination (where to?)
+  -h, --help,
+  -u, --usage   print help/usage information
+
+./$basename is (C) 2019 Martin Frederic 
 EOF
 }
 
@@ -380,6 +400,11 @@ sub main {
   my (@places, $auth, %cmd_opts, %route_opts);
 
   if (@ARGV) {
+    for (@ARGV) {
+      if (/--?h(elp)?/)  { print_help; exit }
+      if (/--?u(sage)?/) { print_help; exit }
+    }
+
     Module::Load::load(Getopt::Std);
 
     # Switches:
