@@ -380,7 +380,7 @@ sub main {
 
   my $ua = Mojo::UserAgent->new;
 
-  my (@places, $auth);
+  my (@places, $auth, %route_opts);
 
   {
     local $| = 1;
@@ -391,19 +391,16 @@ sub main {
   }
 
   @places = get_places($ua, prompt_user('From?'));
-  my $from = display(PlaceList => \@places);
+  $route_opts{from} = display(PlaceList => \@places);
   print "\n";
 
   @places = get_places($ua, prompt_user('To?'));
-  my $to = display(PlaceList => \@places);
+  $route_opts{to} = display(PlaceList => \@places);
   print "\n";
 
   printf("Here are the routes from %s to %s:\n\n",
-         $from->{name}, $to->{name});
-  my %route_opts = (
-    from => $from,
-    to => $to
-  );
+         $route_opts{from}->{name},
+         $route_opts{to}->{name});
   my @routes = get_routes($ua, $auth, %route_opts);
   display(RouteList => \@routes);
 }
