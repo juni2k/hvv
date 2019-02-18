@@ -66,6 +66,10 @@ Run without any option for interactive use.
 Options:
   -a PLACE      use PLACE as start (from where?)
   -b PLACE      use PLACE as destination (where to?)
+
+  -n NEXT       number of next schedules to fetch (default: 4)
+  -p PREV       number of previous schedules to fetch (default: 0)
+
   -h, --help,
   -u, --usage   print help/usage information
 
@@ -409,7 +413,7 @@ sub main {
 
     # Switches:
     # a / b -- from A to B
-    Getopt::Std::getopt('a:b:', \%cmd_opts);
+    Getopt::Std::getopt('a:b:n:p:', \%cmd_opts);
   }
 
   my $ua = Mojo::UserAgent->new;
@@ -440,6 +444,17 @@ sub main {
     @places = get_places($ua, prompt_user('To?'));
     $route_opts{to} = display(PlaceList => \@places);
     print "\n";
+  }
+
+  # check for definedness since
+  # n can also contain a 0
+  if (defined $cmd_opts{n}) {
+    $route_opts{schedules_after} = $cmd_opts{n};
+  }
+
+  # dito
+  if (defined $cmd_opts{p}) {
+    $route_opts{schedules_before} = $cmd_opts{p};
   }
 
   printf("Here are the routes from %s to %s:\n\n",
