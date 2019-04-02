@@ -212,8 +212,8 @@ sub get_places {
   );
   my $res = $ua->post($urls{check_name}, json => \%payload)->result;
   unless ($res->is_success) {
-    p $res;
-    exit(0);
+    debug_response($res);
+    die "^\n";
   }
 
   my $structure = Mojo::JSON::decode_json($res->body);
