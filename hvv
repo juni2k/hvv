@@ -22,6 +22,7 @@ use Encode qw//;
 use Getopt::Std qw//;
 use MIME::Base64 qw//;
 use Module::Load qw//;
+use POSIX qw//;
 
 use Mojo::JSON;
 use Mojo::UserAgent;
@@ -89,10 +90,6 @@ sub setup {
   binmode(STDOUT, 'encoding(UTF-8)');
   binmode(STDERR, 'encoding(UTF-8)');
 
-  # Required for `date` (used in get_routes)
-  # to emit HVV-compliant dates
-  $ENV{TZ} = 'Europe/Berlin';
-
   if ($^O =~ /MSWin32/) {
     print STDERR "Warning: This script might not work on MS-Windows.\n";
 
@@ -137,6 +134,12 @@ sub prompt_user {
   }
 
   return $answer;
+}
+
+sub get_datetime {
+  my @dt = split(/ /, POSIX::strftime('%d.%m.%Y %H:%M', localtime));
+
+  return (date => $dt[0], time => $dt[1]);
 }
 
 sub get_auth_credentials {
@@ -286,20 +289,14 @@ sub get_routes {
       }
     ],
     time => {
-      # Yes, this is shit, but loading a
-      # heavyweight module is even shittier
-      date => `date +%d.%m.%Y`,
-      time => `date +%H:%M`
+      # (date => foo, time => bar)
+      get_datetime
     },
     timeIsDeparture => Mojo::JSON::true,
     toDestBy => 'FOOTPATH',
     toStartBy => 'FOOTPATH',
     version => 34
   );
-
-  # Remove newlines emitted by `date`
-  chomp($payload{time}->{date});
-  chomp($payload{time}->{time});
 
   my $req_body = $ua->build_tx(
     POST => $urls{get_route},
