@@ -184,7 +184,25 @@ sub get_auth_credentials {
 }
 
 sub make_auth_headers {
-  my ($auth, $req_body) = @_;
+  my ($ua, $auth, $url, $payload, $req_body);
+
+  if (@_ == 3) {
+    ($ua, $auth, $req_body) = @_;
+  } else {
+    ($ua, $auth, $url, $payload) = @_;
+  }
+
+  unless ($req_body) {
+    # Create a dummy request body
+    # which will be signed
+    $req_body = $ua->build_tx(
+      POST => $url,
+      json => $payload
+    )->req->body;
+
+    # GEOFOX expects UTF-8
+    $req_body = Encode::encode('UTF-8', $req_body);
+  }
 
   # Reference, chapter 3.3.1:
   # https://geofox.hvv.de/gti/doc/pdf/GEOFOX_GTI_Anwenderhandbuch_p.pdf
@@ -211,22 +229,12 @@ sub get_places {
     }
   );
 
-  # Create a dummy request body which will
-  # be signed
-  my $req_body = $ua->build_tx(
-    POST => $urls{check_name},
-    json => \%payload
-  )->req->body;
-
-  # make_auth_headers expects UTF-8
-  $req_body = Encode::encode('UTF-8', $req_body);
-
   my %headers = (
     'Accept'       => 'application/json',
     'Content-Type' => 'application/json',
 
     # geofox-auth-user, geofox-auth-signature
-    make_auth_headers($auth, $req_body)
+    make_auth_headers($ua, $auth, $urls{check_name}, \%payload)
   );
 
   my $res = $ua->post($urls{check_name}, \%headers,
@@ -297,14 +305,11 @@ sub get_routes {
   chomp($payload{time}->{date});
   chomp($payload{time}->{time});
 
-  # Create a dummy request body which will
-  # be signed
   my $req_body = $ua->build_tx(
     POST => $urls{get_route},
     json => \%payload
   )->req->body;
 
-  # make_auth_headers expects UTF-8
   $req_body = Encode::encode('UTF-8', $req_body);
 
   my %headers = (
@@ -312,7 +317,7 @@ sub get_routes {
     'Content-Type' => 'application/json',
 
     # geofox-auth-user, geofox-auth-signature
-    make_auth_headers($auth, $req_body)
+    make_auth_headers($ua, $auth, $req_body)
   );
 
   my $res = $ua->post(
