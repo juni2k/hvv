@@ -207,11 +207,7 @@ sub make_auth_headers {
   # Reference, chapter 3.3.1:
   # https://geofox.hvv.de/gti/doc/pdf/GEOFOX_GTI_Anwenderhandbuch_p.pdf
   my $signature = MIME::Base64::encode_base64(
-    Digest::SHA::hmac_sha1($req_body, $auth->{password}));
-
-  # $signature has an \n at the end and
-  # I have absolutely no idea why
-  chomp($signature);
+    Digest::SHA::hmac_sha1($req_body, $auth->{password}), '');
 
   return (
     'geofox-auth-user' => $auth->{username},
