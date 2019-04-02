@@ -17,16 +17,10 @@ use utf8;
 no warnings qw[qw]; # Heh.
 
 use Data::Dumper;
-use Digest::SHA qw//;
 use Encode qw//;
-use Getopt::Std qw//;
-use MIME::Base64 qw//;
 use Module::Load qw//;
-use POSIX qw//;
 
 use Mojo::JSON;
-use Mojo::UserAgent;
-use Text::Table;
 
 my %urls = (
   base    => 'https://www.hvv.de',
@@ -58,6 +52,7 @@ EOF
 
 sub print_help {
   Module::Load::load(File::Basename);
+
   my $basename = File::Basename::basename($0);
   print <<"EOF";
 Usage: ./$basename [OPTION]...
@@ -137,8 +132,9 @@ sub prompt_user {
 }
 
 sub get_datetime {
-  my @dt = split(/ /, POSIX::strftime('%d.%m.%Y %H:%M', localtime));
+  Module::Load::load(POSIX);
 
+  my @dt = split(/ /, POSIX::strftime('%d.%m.%Y %H:%M', localtime));
   return (date => $dt[0], time => $dt[1]);
 }
 
@@ -146,6 +142,9 @@ sub get_auth_credentials {
   # This method extracts the login details
   # from publicly accessible JavaScript --
   # Very legal & very cool!
+
+  Module::Load::load(MIME::Base64);
+  Module::Load::load(Digest::SHA);
 
   my ($ua) = @_;
 
@@ -370,6 +369,8 @@ sub debug_response {
 }
 
 sub display {
+  Module::Load::load(Text::Table);
+
   my ($type, $ref) = @_;
 
   if ($type eq 'PlaceList') {
@@ -440,6 +441,11 @@ sub main {
     # a / b -- from A to B
     Getopt::Std::getopt('a:b:n:p:', \%cmd_opts);
   }
+
+  # At this point, we're past the help/usage/whatever
+  # section (which has to be displayed quickly) and
+  # might load some modules dynamically
+  Module::Load::load(Mojo::UserAgent);
 
   my $ua = Mojo::UserAgent->new;
 
