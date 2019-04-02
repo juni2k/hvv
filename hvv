@@ -35,8 +35,8 @@ my %urls = (
 %urls = (
   %urls,
   home       => $urls{base}.'/en',
-  check_name => $urls{base}.'/geofox/checkName',
   gf_base    => $urls{geofox}.'/jsf/home.seam',
+  check_name => $urls{geofox}.'/gti/restapp/checkName',
   get_route  => $urls{geofox}.'/gti/restapp/getRoute',
 
   # extended by get_auth_credentials
@@ -202,7 +202,7 @@ sub make_auth_headers {
 }
 
 sub get_places {
-  my ($ua, $query) = @_;
+  my ($ua, $auth, $query) = @_;
 
   my %payload = (
     maxList => 20,
@@ -210,7 +210,27 @@ sub get_places {
       name => $query,
     }
   );
-  my $res = $ua->post($urls{check_name}, json => \%payload)->result;
+
+  # Create a dummy request body which will
+  # be signed
+  my $req_body = $ua->build_tx(
+    POST => $urls{check_name},
+    json => \%payload
+  )->req->body;
+
+  # make_auth_headers expects UTF-8
+  $req_body = Encode::encode('UTF-8', $req_body);
+
+  my %headers = (
+    'Accept'       => 'application/json',
+    'Content-Type' => 'application/json',
+
+    # geofox-auth-user, geofox-auth-signature
+    make_auth_headers($auth, $req_body)
+  );
+
+  my $res = $ua->post($urls{check_name}, \%headers,
+                      json => \%payload)->result;
   unless ($res->is_success) {
     debug_response($res);
     die "^\n";
@@ -435,20 +455,20 @@ sub main {
 
   if ($cmd_opts{a}) {
     # non-interactive
-    $route_opts{from} = get_places($ua, $cmd_opts{a});
+    $route_opts{from} = get_places($ua, $auth, $cmd_opts{a});
   } else {
     # interactive
-    @places = get_places($ua, prompt_user('From?'));
+    @places = get_places($ua, $auth, prompt_user('From?'));
     $route_opts{from} = display(PlaceList => \@places);
     print "\n";
   }
 
   if ($cmd_opts{b}) {
     # non-interactive
-    $route_opts{to} = get_places($ua, $cmd_opts{b});
+    $route_opts{to} = get_places($ua, $auth, $cmd_opts{b});
   } else {
     # interactive
-    @places = get_places($ua, prompt_user('To?'));
+    @places = get_places($ua, $auth, prompt_user('To?'));
     $route_opts{to} = display(PlaceList => \@places);
     print "\n";
   }
