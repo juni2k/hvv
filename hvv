@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-# martin, 2019-01-22, 2019-02-14
+# martin, 2019-01-22, 2019-02-14, 2019-04-02, 2019-04-03
 # call with --help for help/usage
 
 # TODO:
@@ -77,6 +77,25 @@ Example:
   ./$basename  -a "airport" -b "elphi" -n 1 -p 1
 
 ./$basename is (C) 2019 Martin Frederic 
+EOF
+}
+
+sub print_mojo_error {
+  print <<'EOF';
+Looks as if Mojolicious is not installed (needed for HTTP requests).
+Here is how you might install it:
+
+Void Linux
+  xbps-install perl-Mojolicious
+
+Debian / Ubuntu
+  apt install libmojolicious-perl
+
+Fedora
+  dnf install perl-Mojolicious
+
+Arch Linux (AUR)
+  yay -S perl-mojolicious
 EOF
 }
 
@@ -445,7 +464,8 @@ sub main {
   # At this point, we're past the help/usage/whatever
   # section (which has to be displayed quickly) and
   # might load some modules dynamically
-  Module::Load::load(Mojo::UserAgent);
+  eval    { Module::Load::load(Mojo::UserAgent) };
+  if ($@) { print_mojo_error; exit }
 
   my $ua = Mojo::UserAgent->new;
 
