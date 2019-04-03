@@ -20,12 +20,54 @@ use Data::Dumper;
 use Encode qw//;
 use Module::Load qw//;
 
-use Mojo::JSON;
-
 my %HAS = (
-    WIN32 => ($^O =~ /MSWin32/) +0
+    WIN32   => ($^O =~ /MSWin32/) +0,
+    JSON_XS => &load_json_xs
 );
 
+# JSON adapter functions
+sub load_json_xs {
+  eval { Module::Load::load(JSON::XS) };
+  my $has_xs = !$@+0;
+
+  unless ($has_xs) {
+    Module::Load::load(JSON::PP);
+  }
+
+  return $has_xs;
+}
+
+sub json_false {
+  no strict;
+  return $HAS{JSON_XS} ?
+      Types::Serialiser::false() :
+      JSON::PP::false();
+}
+
+sub json_true {
+  no strict;
+  return $HAS{JSON_XS} ?
+      Types::Serialiser::true() :
+      JSON::PP::true();
+}
+
+sub encode_json {
+  if ($HAS{JSON_XS}) {
+    goto &JSON::XS::encode_json;
+  } else {
+    goto &JSON::PP::encode_json;
+  }
+}
+
+sub decode_json {
+  if ($HAS{JSON_XS}) {
+    goto &JSON::XS::decode_json;
+  } else {
+    goto &JSON::PP::decode_json;
+  }
+}
+
+# Main program
 my %urls = (
   base    => 'https://www.hvv.de',
   geofox  => 'https://geofox.hvv.de'
@@ -265,7 +307,7 @@ sub get_places {
     die "^\n";
   }
 
-  my $structure = Mojo::JSON::decode_json($res->body);
+  my $structure = decode_json($res->body);
   unless ($structure->{returnCode} eq 'OK') {
     die "API did not return OK: ".Dumper($structure)."\n";
   }
@@ -286,7 +328,7 @@ sub get_routes {
   my %payload = (
     start => $opts{from},
     dest => $opts{to},
-    intermediateStops => Mojo::JSON::false,
+    intermediateStops => json_false,
     language => 'en',
     penalties => [
       {
@@ -295,26 +337,26 @@ sub get_routes {
       }
     ],
     realtime => 'REALTIME',
-    returnContSearchData => Mojo::JSON::true,
+    returnContSearchData => json_true,
     schedulesAfter  => ($opts{schedules_after}  // 4), # hvv.de defaults
     schedulesBefore => ($opts{schedules_before} // 0), # hvv.de defaults
     tariffInfoSelector => [
       {
         kinds => [1],
         tariff => 'HVV',
-        tariffRegions => Mojo::JSON::false
+        tariffRegions => json_false
       },
       {
         kinds => [1],
         tariff => 'SH',
-        tariffRegions => Mojo::JSON::false
+        tariffRegions => json_false
       }
     ],
     time => {
       # (date => foo, time => bar)
       get_datetime
     },
-    timeIsDeparture => Mojo::JSON::true,
+    timeIsDeparture => json_true,
     toDestBy => 'FOOTPATH',
     toStartBy => 'FOOTPATH',
     version => 34
