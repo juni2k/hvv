@@ -580,4 +580,4 @@ sub main {
   display(RouteList => \@routes);
 }
 
-main;
+main if __FILE__ eq $0;
