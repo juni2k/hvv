@@ -2,7 +2,6 @@
 
 # TODO:
 # - coloured output
-# - getting rid of Text::Table (maybe)
 # - ask for time
 # - favourite places (maybe)
 # - display results in $PAGER
@@ -430,22 +429,46 @@ sub debug_response {
   print $res->body, "\n";
 }
 
-sub display {
-  Module::Load::load(Text::Table);
+sub display_table {
+  my ($rows) = @_;
 
+  # Find largest column for each row
+  my @max_column_width =
+      map { 0 } @{ $rows->[0] };
+
+  while (my ($row_index, $row) = each @{ $rows }) {
+    while (my ($column_index, $column) = each @{ $row }) {
+      # Replace undef with empty string
+      $rows->[$row_index]->[$column_index] //= '';
+
+      if ($column && length $column > $max_column_width[$column_index]) {
+        $max_column_width[$column_index] = length $column;
+      }
+    }
+  }
+
+  # Print columns in regard to @max_column_width
+  for my $row (@{ $rows }) {
+    while (my ($index, $column) = each @{ $row }) {
+        print $column, ' ' x ($max_column_width[$index] - length($column) + 1);
+    }
+    print "\n";
+  }
+}
+
+sub display {
   my ($type, $ref) = @_;
 
   if ($type eq 'PlaceList') {
     my @places = $ref->@*;
 
-    my $tb = Text::Table->new(qw/# Name City Type/);
-    while (my ($index, $place) = each(@places)) {
-      $tb->add($index, $place->{name},
-               $place->{city}, $place->{type});
+    my @table = ([ qw[# Name City Type] ]);
+    while (my ($index, $place) = each @places) {
+      push @table, [$index, $place->{name},
+                   $place->{city}, $place->{type}];
     }
-
     print "Found multiple places:\n\n";
-    print $tb;
+    print display_table(\@table);
 
     printf "Please select a station [0-%d]: ", $#places;
     my $index = <STDIN>;
@@ -456,31 +479,30 @@ sub display {
     my @routes = $ref->@*;
 
     for my $schedule (@routes) {
-      my $tb = Text::Table->new(qw/Time Label/);
       my @connections = $schedule->{scheduleElements}->@*;
+
+      my @table = ([ qw[Time Label] ]);
       while (my ($index, $connection) = each(@connections)) {
-        $tb->add(
-          $connection->{from}{depTime}{time},
-          $connection->{from}{name}
-        );
-        $tb->add(
-          undef,
-          ($connection->{line}{direction} ?
-           (sprintf "%s => %s",
-            $connection->{line}{name},
-            $connection->{line}{direction}) :
-           "(@{[$connection->{line}{name}]})"
-          )
-        );
+        push @table,
+            [$connection->{from}{depTime}{time},
+             $connection->{from}{name}],
+            [undef,
+             ($connection->{line}{direction} ?
+              (sprintf "%s => %s",
+               $connection->{line}{name},
+               $connection->{line}{direction}) :
+              "(@{[$connection->{line}{name}]})")]
+            ;
 
         if ($index == $#connections) {
-          $tb->add(
-            $connection->{to}{depTime}{time},
-            $connection->{to}{name}
-          );
+          push @table,
+              [$connection->{to}{depTime}{time},
+               $connection->{to}{name}];
+          ;
         }
       }
-      print $tb, "\n";
+      display_table(\@table);
+      print "\n";
     }
   }
 }

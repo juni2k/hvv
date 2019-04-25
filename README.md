@@ -18,9 +18,8 @@ clunky and frustrating than the official website when you are in a rush.
 
 ## Installation
 
-`hvv` depends on two external Perl modules: Mojolicious and Text::Table.
-Since they are commonly used, it shouldn't be a hassle to get them
-installed via a package manager.
+`hvv` depends on `Mojolicious`, an external Perl module. It is likely
+available in your distro's repository.
 
 Other than that, just drop `hvv` in your path and you are good to go!
 
