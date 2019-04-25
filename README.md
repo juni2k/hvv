@@ -10,11 +10,11 @@ clunky and frustrating than the official website when you are in a rush.
 
 [hvv-web]: https://geofox.hvv.de
 
-## Features
+## Perks
 
-- **Fast:** don't get frustrated by disappearing menus and a bloated website!
-- **Friendly:** starts an interactive mode for unspecified arguments!
-- **Flexible:** written in (readable and sane) Perl!
+- **Fast:** optimized for speed and perceived responsiveness!
+- **Friendly:** unspecified command-line arguments trigger an interactive mode!
+- **Flexible:** written in (mostly) readable and sane Perl!
 
 ## Installation
 
