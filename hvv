@@ -462,19 +462,31 @@ sub display {
   if ($type eq 'PlaceList') {
     my @places = $ref->@*;
 
-    my @table = ([ qw[# Name City Type] ]);
-    while (my ($index, $place) = each @places) {
-      push @table, [$index, $place->{name},
-                   $place->{city}, $place->{type}];
+    my ($chosen_place);
+
+    # There is no need to prompt the user
+    # if there aren't multiple results
+    if (@places == 1) {
+      $chosen_place = $places[0];
+      printf "Selected: %s, %s\n",
+          $chosen_place->{name}, $chosen_place->{city};
+    } elsif (@places > 1) {
+      my @table = ([ qw[# Name City Type] ]);
+      while (my ($index, $place) = each @places) {
+        push @table, [$index, $place->{name},
+                      $place->{city}, $place->{type}];
+      }
+      print "Found multiple places:\n\n";
+      print display_table(\@table);
+
+      printf "Please select a station [0-%d]: ", $#places;
+      my $index = <STDIN>;
+      chomp($index);
+
+      $chosen_place = $places[$index];
     }
-    print "Found multiple places:\n\n";
-    print display_table(\@table);
 
-    printf "Please select a station [0-%d]: ", $#places;
-    my $index = <STDIN>;
-    chomp($index);
-
-    return $places[$index];
+    return $chosen_place;
   } elsif ($type eq 'RouteList') {
     my @routes = $ref->@*;
 
