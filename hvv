@@ -450,7 +450,8 @@ sub display_table {
   # Print columns in regard to @max_column_width
   for my $row (@{ $rows }) {
     while (my ($index, $column) = each @{ $row }) {
-        print $column, ' ' x ($max_column_width[$index] - length($column) + 1);
+        print $column,
+            ' ' x ($max_column_width[$index] - length($column) + 1);
     }
     print "\n";
   }
