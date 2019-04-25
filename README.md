@@ -23,6 +23,11 @@ available in your distro's repository.
 
 Other than that, just drop `hvv` in your path and you are good to go!
 
+## Misc
+
+- The oldest supported version of perl is v5.18. If something does not work
+  under v5.18 (or newer), please let me know.
+
 ## License
 
 ```
