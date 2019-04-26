@@ -528,11 +528,16 @@ sub display {
     for my $schedule (@routes) {
       my @connections = @{ $schedule->{scheduleElements} };
 
+      # TODO: refactor this mess
       my @table = ([ qw[Time Label] ]);
       while (my ($index, $connection) = each(@connections)) {
         push @table,
             [$connection->{from}{depTime}{time},
-             $connection->{from}{name}],
+             ($connection->{from}{platform} ?
+              sprintf "%s (%s)",
+              $connection->{from}{name},
+              $connection->{from}{platform} :
+             $connection->{from}{name})],
             [undef,
              ($connection->{line}{direction} ?
               (sprintf "%s => %s",
@@ -544,7 +549,11 @@ sub display {
         if ($index == $#connections) {
           push @table,
               [$connection->{to}{depTime}{time},
-               $connection->{to}{name}];
+               ($connection->{to}{platform} ?
+                sprintf "%s (%s)",
+                $connection->{to}{name},
+                $connection->{to}{platform} :
+                $connection->{to}{name})];
           ;
         }
       }
