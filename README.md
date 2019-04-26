@@ -18,8 +18,8 @@ clunky and frustrating than the official website when you are in a rush.
 
 ## Installation
 
-`hvv` depends on `Mojolicious`, an external Perl module. It is likely
-available in your distro's repository.
+`hvv` depends on `Mojolicious` and `IO::Socket::SSL`, external Perl
+modules.  They are likely available in your distro's repository.
 
 Other than that, just drop `hvv` in your path and you are good to go!
 

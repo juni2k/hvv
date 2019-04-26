@@ -145,6 +145,25 @@ Arch Linux (AUR)
 EOF
 }
 
+sub print_io_socket_ssl_error {
+  print <<'EOF';
+Looks as if IO::Socket::SSL is not installed (needed for, uh, SSL/TLS).
+Here is how you might install it:
+
+Void Linux
+  xbps-install perl-IO-Socket-SSL
+
+Debian / Ubuntu
+  apt install libio-socket-ssl-perl
+
+Fedora
+  dnf install perl-IO-Socket-SSL
+
+Arch Linux
+  pacman -S perl-io-socket-ssl
+EOF
+}
+
 sub setup {
   binmode(STDIN,  'encoding(UTF-8)');
   binmode(STDOUT, 'encoding(UTF-8)');
@@ -558,6 +577,9 @@ sub main {
   # might load some modules dynamically
   eval    { Module::Load::load(Mojo::UserAgent) };
   if ($@) { print_mojo_error; exit }
+
+  eval    { Module::Load::load(IO::Socket::SSL) };
+  if ($@) { print_io_socket_ssl_error; exit }
 
   my $ua = Mojo::UserAgent->new;
 
