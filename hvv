@@ -514,10 +514,8 @@ sub display {
       print "Found multiple places:\n\n";
       print display_table(\@table);
 
-      printf "Please select a station [0-%d]: ", $#places;
-      my $index = <STDIN>;
-      chomp($index);
-
+      my $index = prompt_user(
+        sprintf("Please select a station [0-%d]: ", $#places));
       $chosen_place = $places[$index];
     }
 
