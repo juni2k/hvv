@@ -179,9 +179,10 @@ sub quit {
 
 sub prompt_user {
   no warnings qw[uninitialized];
-  my ($label, $fail_msg, %opts) = @_;
+  my ($label, %opts) = @_;
 
-  $fail_msg //= "Your input does not look valid\n";
+  my $fail_msg = "Your input does not look valid\n";
+
   $opts{allow_empty} //= 0;
 
   my $answer;
@@ -190,7 +191,9 @@ sub prompt_user {
     $answer = <STDIN>;
     chomp($answer);
 
-    last if ($answer ne '') || $opts{allow_empty};
+    if (($answer ne '') || $opts{allow_empty}) {
+      last;
+    }
     print $fail_msg;
   }
 
@@ -585,7 +588,7 @@ sub main {
     # interactive
     # $route_opts{time} =
     my %dt = get_datetime;
-    my $time = prompt_user("Departure time? [$dt{time}]", '', allow_empty => 1);
+    my $time = prompt_user("Departure time? [$dt{time}]", allow_empty => 1);
 
     if ($time ne '') {
       $dt{time} = $time;
