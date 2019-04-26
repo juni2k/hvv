@@ -316,6 +316,16 @@ sub get_places {
     die "API did not return OK: ".Dumper($structure)."\n";
   }
 
+  unless (exists $structure->{results}) {
+    # This should actually do a loop or something but
+    # I couldn't care less for now
+
+    die "Please specify a location that actually exists...\n";
+
+    # Also: thanks to HVV for returning "OK"
+    # even though there are no results
+  }
+
   if (wantarray) {
     return @{ $structure->{results} };
   } else {
