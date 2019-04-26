@@ -548,7 +548,7 @@ sub display {
 
         if ($index == $#connections) {
           push @table,
-              [$connection->{to}{depTime}{time},
+              [$connection->{to}{arrTime}{time},
                ($connection->{to}{platform} ?
                 sprintf "%s (%s)",
                 $connection->{to}{name},
