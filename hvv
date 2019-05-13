@@ -165,9 +165,9 @@ EOF
 }
 
 sub setup {
-  binmode(STDIN,  'encoding(UTF-8)');
-  binmode(STDOUT, 'encoding(UTF-8)');
-  binmode(STDERR, 'encoding(UTF-8)');
+  binmode(STDIN,  ':encoding(UTF-8)');
+  binmode(STDOUT, ':encoding(UTF-8)');
+  binmode(STDERR, ':encoding(UTF-8)');
 
   if ($HAS{WIN32}) {
     print STDERR "Warning: This script might not work on MS-Windows.\n";
