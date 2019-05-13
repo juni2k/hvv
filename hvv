@@ -19,7 +19,7 @@ use Module::Load qw//;
 
 my %HAS = (
     WIN32   => ($^O =~ /MSWin32/) +0,
-    JSON_XS => &load_json_xs
+    JSON_XS => load_json_xs()
 );
 
 # JSON adapter functions
