@@ -209,7 +209,11 @@ sub prompt_user {
     $answer = <STDIN>;
     chomp($answer);
 
-    if (($answer ne '') || $opts{allow_empty}) {
+    if (exists $opts{validate}) {
+      if ($opts{validate}->($answer)) {
+        last;
+      }
+    } elsif (($answer ne '') || $opts{allow_empty}) {
       last;
     }
     print $fail_msg;
@@ -498,7 +502,12 @@ sub display {
       print display_table(\@table);
 
       my $index = prompt_user(
-        sprintf("Please select a station [0-%d]: ", $#places));
+        sprintf("Please select a station [0-%d]: ", $#places),
+        validate => sub {
+          my ($n) = @_;
+          $n =~ /\d+/ && 0 < $n && $n < $#places;
+        }
+      );
       $chosen_place = $places[$index];
     }
 
