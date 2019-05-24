@@ -13,7 +13,8 @@ clunky and frustrating than the official website when you are in a rush.
 ## Perks
 
 - **Fast:** optimized for speed and perceived responsiveness!
-- **Friendly:** unspecified command-line arguments trigger an interactive mode!
+- **Friendly:** unspecified command-line arguments trigger an
+  interactive mode!
 - **Flexible:** written in (mostly) readable and sane Perl!
 
 ## Installation
@@ -25,8 +26,14 @@ Other than that, just drop `hvv` in your path and you are good to go!
 
 ## Misc
 
-- The oldest supported version of perl is v5.18. If something does not work
-  under v5.18 (or newer), please let me know.
+- The oldest supported version of perl is v5.18. If something does not
+  work under v5.18 (or newer), please let me know.
+- I'd like to thank [knoellle][knoellle] for inspiration and helping me
+  understand some API quirks, and [Bendodroid][bendodroid] for
+  discovering lots of bugs and breaking things as often as possible.
+
+[knoellle]: https://github.com/knoellle
+[bendodroid]: https://github.com/Bendodroid
 
 ## License
 
