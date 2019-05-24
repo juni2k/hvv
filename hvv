@@ -505,7 +505,7 @@ sub display {
         sprintf("Please select a station [0-%d]: ", $#places),
         validate => sub {
           my ($n) = @_;
-          $n =~ /\d+/ && 0 < $n && $n < $#places;
+          $n =~ /\d+/ && 0 <= $n && $n <= $#places;
         }
       );
       $chosen_place = $places[$index];
