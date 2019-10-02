@@ -564,13 +564,7 @@ sub main {
 
   my $ua = Mojo::UserAgent->new;
 
-  {
-    local $| = 1;
-    my $connect_msg = 'Establishing connection to HVV ...';
-    print $connect_msg;
-    $auth = get_auth_credentials($ua);
-    print "\r", ' ' x length($connect_msg), "\r";
-  }
+  $auth = get_auth_credentials($ua);
 
   if ($cmd_opts{a}) {
     # non-interactive
