@@ -188,50 +188,74 @@ sub get_datetime {
 }
 
 sub get_auth_credentials {
-  # This method extracts the login details
-  # from publicly accessible JavaScript --
-  # Very legal & very cool!
+  # Retrieves (fetches / caches) required credentials
 
-  Module::Load::load(MIME::Base64);
-  Module::Load::load(Digest::SHA);
+  my $auth = {
+    username => undef,
+    password => undef
+  };
 
-  my ($ua) = @_;
+  Module::Load::load(File::Spec);
+  Module::Load::load(Storable);
 
-  my ($res);
+  # Use $XDG_CACHE_HOME or $HOME/.cache
+  my $cache_home = $ENV{XDG_CACHE_HOME} // do {
+    $ENV{HOME}
+    ? File::Spec->catfile($ENV{HOME}, '.cache')
+    : die "\nNeither \$XDG_CACHE_HOME nor \$HOME are set, exiting\n";
+  };
+  my $auth_file = File::Spec->catfile($cache_home, 'hvv-auth');
 
-  # Extract main.js path
-  $res = $ua->get($urls{gf_base})->result;
-  unless ($res->is_success) {
-    print "could not fetch geofox homepage\n";
-    debug_response($res);
-    die "^\n";
-  }
-
-  if ($res->body =~ m[(de/main.*?\.js)]) {
-    $urls{script} .= $1;
+  if (-e $auth_file) {
+    # Auth is cached!
+    $auth = Storable::retrieve($auth_file);
   } else {
-    die "could not extract main.js uri from geofox\n";
+    # No auth cache, let's extract the login details
+    # from publicly accessible JavaScript --
+    # Very legal & very cool!
+
+    Module::Load::load(MIME::Base64);
+    Module::Load::load(Digest::SHA);
+
+    my ($ua) = @_;
+
+    my ($res);
+
+    # Extract main.js path
+    $res = $ua->get($urls{gf_base})->result;
+    unless ($res->is_success) {
+      print "could not fetch geofox homepage\n";
+      debug_response($res);
+      die "^\n";
+    }
+
+    if ($res->body =~ m[(de/main.*?\.js)]) {
+      $urls{script} .= $1;
+    } else {
+      die "could not extract main.js uri from geofox\n";
+    }
+
+    # Fetch main.js (contains credentials)
+    $res = $ua->get($urls{script})->result;
+    unless ($res->is_success) {
+      print "could not fetch JavaScript\n";
+      debug_response($res);
+      die "^\n";
+    }
+
+    my $js = $res->body;
+
+    ($auth->{username}) = $js =~ /gtiUser="(.*?)"/;
+    ($auth->{password}) = $js =~ /gtiPassword="(.*?)"/;
+
+    unless ($auth->{username} && $auth->{password}) {
+      die "could not extract login details\n";
+    }
+
+    Storable::store($auth, $auth_file);
   }
 
-  # Fetch main.js (contains credentials)
-  $res = $ua->get($urls{script})->result;
-  unless ($res->is_success) {
-    print "could not fetch JavaScript\n";
-    debug_response($res);
-    die "^\n";
-  }
-
-  my $js = $res->body;
-  my %auth;
-
-  ($auth{username}) = $js =~ /gtiUser="(.*?)"/;
-  ($auth{password}) = $js =~ /gtiPassword="(.*?)"/;
-
-  unless ($auth{username} && $auth{password}) {
-    die "could not extract login details\n";
-  }
-
-  return \%auth;
+  return $auth;
 }
 
 sub make_auth_headers {
