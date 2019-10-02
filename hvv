@@ -15,54 +15,12 @@ no warnings qw[qw]; # Heh.
 
 use Data::Dumper;
 use Encode qw//;
+use JSON::PP qw/encode_json decode_json/;
 use Module::Load qw//;
 
 my %HAS = (
     WIN32   => ($^O =~ /MSWin32/) +0,
-    JSON_XS => load_json_xs()
 );
-
-# JSON adapter functions
-sub load_json_xs {
-  eval { Module::Load::load(JSON::XS) };
-  my $has_xs = !$@+0;
-
-  unless ($has_xs) {
-    Module::Load::load(JSON::PP);
-  }
-
-  return $has_xs;
-}
-
-sub json_false {
-  no strict;
-  return $HAS{JSON_XS} ?
-      Types::Serialiser::false() :
-      JSON::PP::false();
-}
-
-sub json_true {
-  no strict;
-  return $HAS{JSON_XS} ?
-      Types::Serialiser::true() :
-      JSON::PP::true();
-}
-
-sub encode_json {
-  if ($HAS{JSON_XS}) {
-    goto &JSON::XS::encode_json;
-  } else {
-    goto &JSON::PP::encode_json;
-  }
-}
-
-sub decode_json {
-  if ($HAS{JSON_XS}) {
-    goto &JSON::XS::decode_json;
-  } else {
-    goto &JSON::PP::decode_json;
-  }
-}
 
 # Main program
 my %urls = (
@@ -352,7 +310,7 @@ sub get_routes {
   my %payload = (
     start => $opts{from},
     dest => $opts{to},
-    intermediateStops => json_false,
+    intermediateStops => $JSON::PP::false,
     language => 'en',
     penalties => [
       {
@@ -361,23 +319,23 @@ sub get_routes {
       }
     ],
     realtime => 'REALTIME',
-    returnContSearchData => json_true,
+    returnContSearchData => $JSON::PP::true,
     schedulesAfter  => ($opts{schedules_after}  // 4), # hvv.de defaults
     schedulesBefore => ($opts{schedules_before} // 0), # hvv.de defaults
     tariffInfoSelector => [
       {
         kinds => [1],
         tariff => 'HVV',
-        tariffRegions => json_false
+        tariffRegions => $JSON::PP::false
       },
       {
         kinds => [1],
         tariff => 'SH',
-        tariffRegions => json_false
+        tariffRegions => $JSON::PP::false
       }
     ],
     time => $opts{time},
-    timeIsDeparture => json_true,
+    timeIsDeparture => $JSON::PP::true,
     toDestBy => 'FOOTPATH',
     toStartBy => 'FOOTPATH',
     version => 34
