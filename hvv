@@ -1,7 +1,6 @@
 #!/usr/bin/env perl
 
 # TODO:
-# - coloured output
 # - favourite places (maybe)
 # - display results in $PAGER
 
@@ -17,6 +16,7 @@ use Data::Dumper;
 use Encode qw//;
 use JSON::PP qw/encode_json decode_json/;
 use Module::Load qw//;
+use Term::ANSIColor qw/:constants/;
 
 my %HAS = (
     WIN32   => ($^O =~ /MSWin32/) +0,
@@ -163,7 +163,7 @@ sub prompt_user {
 
   my $answer;
   while (1) {
-    print "$label ";
+    print YELLOW, "$label ", RESET;
     $answer = <STDIN>;
     chomp($answer);
 
@@ -456,12 +456,14 @@ sub display_table {
   }
 
   # Print columns in regard to @max_column_width
+  my $cnt;
   for my $row (@{ $rows }) {
+    print ($cnt++ % 2 ? RESET : FAINT);
     while (my ($index, $column) = each @{ $row }) {
         print $column,
             ' ' x ($max_column_width[$index] - length($column) + 1);
     }
-    print "\n";
+    print RESET, "\n";
   }
 }
 
