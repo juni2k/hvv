@@ -387,10 +387,15 @@ sub get_routes {
   }
 
   my $structure = $res->json;
-  unless ($structure->{returnCode} eq 'OK') {
-    die "Not OK: "
-        .sprintf("(HTTP %d) ", $res->code)
-        .Dumper($structure)."\n";
+  my $rc = $structure->{returnCode};
+  unless ($rc eq 'OK') {
+    if ($rc eq 'ERROR_ROUTE') {
+      die "HVV could not find a suitable route.\n";
+    } else {
+      die "Not OK: "
+          .sprintf("(HTTP %d) ", $res->code)
+          .Dumper($structure)."\n";
+    }
   }
 
   if (wantarray) {
@@ -615,10 +620,10 @@ sub main {
     $route_opts{schedules_before} = $cmd_opts{p};
   }
 
+  my @routes = get_routes($ua, $auth, %route_opts);
   printf("Here are the routes from %s to %s:\n\n",
          $route_opts{from}->{name},
          $route_opts{to}->{name});
-  my @routes = get_routes($ua, $auth, %route_opts);
   display(RouteList => \@routes);
 }
 
