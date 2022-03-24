@@ -2,6 +2,11 @@
 
 Navigate the seedy underworld of Hamburg in a truly dystopian way!
 
+**2022:** HVV changed things on their end and this script is now
+considered broken. However, I don't have any incentive to fix it
+since I don't live there anymore. Feel free to fix things and make
+a pull request.
+
 ## What is this?
 
 This is a command-line application for interfacing with the [routing
